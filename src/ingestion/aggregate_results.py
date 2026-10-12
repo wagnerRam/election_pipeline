@@ -1,4 +1,3 @@
-
 import pandas as pd
 
 
@@ -30,17 +29,38 @@ def aggregate_results(data: pd.DataFrame) -> pd.DataFrame:
         result["percentual"], errors="raise"
     )
 
+    # Preserva os metadados disponíveis na coleta.
+    metadata_columns = [
+        column
+        for column in [
+            "eleicao",
+            "data_geracao",
+            "hora_geracao",
+            "coletado_em_utc",
+            "ambiente",
+        ]
+        if column in result.columns
+    ]
+
+    aggregations = {
+        "votos": ("votos", "sum"),
+        "percentual_fonte": ("percentual", "first"),
+    }
+
+    for column in metadata_columns:
+        aggregations[column] = (column, "first")
+
     grouped = (
         result.groupby(
             ["uf", "turno", "cargo", "candidato", "partido"],
             as_index=False,
             dropna=False,
         )
-        .agg(
-            votos=("votos", "sum"),
-            percentual_fonte=("percentual", "first"),
+        .agg(**aggregations)
+        .sort_values(
+            ["uf", "votos"],
+            ascending=[True, False],
         )
-        .sort_values(["uf", "votos"], ascending=[True, False])
         .reset_index(drop=True)
     )
 
